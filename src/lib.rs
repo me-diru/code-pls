@@ -10,13 +10,17 @@ use serde::Deserialize;
 
 
 #[derive(Deserialize, Debug)]
+
 pub struct SampleResponse {
     pub input: String,
 }
 
 
-const PROMPT_TEMPLATE: &str = r#"<<SYS>>
-You are an expert programmer that helps to write code based on the user request, with concise explanations. Don't be too verbose.// <</SYS>>
+const PROMPT_TEMPLATE: &str = r#"
+{
+    "role": "system",
+    "content": "You are an expert programmer that helps to write Python code based on the user request, with concise explanations. Don't be too verbose.",
+}
 
 "#;
 
@@ -51,7 +55,6 @@ fn handle_code_pls(req: Request) -> anyhow::Result<impl IntoResponse> {
 
     let encoded_prompt: Option<Vec<u8>> = store.get(PROMPT_KEY).unwrap_or_default();
 
-    // println!("Encoded prompt {:?}", encoded_prompt);
     let mut prompt_history = String::new();
 
     if let Some(mut vec) = encoded_prompt {
@@ -67,7 +70,7 @@ fn handle_code_pls(req: Request) -> anyhow::Result<impl IntoResponse> {
 
         println!("Not able to fetch data :( {:?}", encoded_prompt);
     }
-    // println!("Prompt history {:?}", prompt_history);
+
 
     let body = std::str::from_utf8(req.body()).unwrap();
     println!("Request {:?}", body);
@@ -83,7 +86,7 @@ fn handle_code_pls(req: Request) -> anyhow::Result<impl IntoResponse> {
             .build());
         }
     };
-    // println!("Request {:?}", request);
+
     let model = InferencingModel::CodellamaInstruct;
     prompt_history += request.input.as_str();
 
@@ -94,7 +97,6 @@ fn handle_code_pls(req: Request) -> anyhow::Result<impl IntoResponse> {
         Err(e) => println!("Failed to save data: {}", e),
     }
 
-    // conn.set("prompt_history", );
     let result = infer(model, &prompt_history);
     // println!("Model result {:?}", result);
     let result_text = match result {

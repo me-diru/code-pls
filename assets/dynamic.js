@@ -1,9 +1,11 @@
 // Listen for the Enter key being pressed
-document.addEventListener("keydown", function(event) {
-    if (event.keyCode === 13) {
-      newCard();
-    }
-  });
+document.getElementById('code-input').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault(); 
+      newCard(); 
+  }
+});
+
   
   var globalCardCount = 0;
   var runningInference = false;
@@ -14,11 +16,11 @@ document.addEventListener("keydown", function(event) {
       setAlert("Already running inference, please wait...");
       return;
     }
-    var inputElement = document.getElementById("sentence-input");
-    var sentence = inputElement.value;
-    if (sentence === "") {
-      console.log("Please enter a sentence to analyze");
-      setAlert("Please enter a sentence to analyze");
+    var inputElement = document.getElementById("code-input");
+    var input = inputElement.value;
+    if (input === "") {
+      console.log("Please enter a input to analyze");
+      setAlert("Please enter a input to analyze");
       return;
     }
     inputElement.value = "";
@@ -30,58 +32,54 @@ document.addEventListener("keydown", function(event) {
     newCard.innerHTML = `
       <div class="card bg-base-100 shadow-xl w-full">
           <div class="m-4 flex flex-col gap-2">
-              <div>${sentence}</div>
+              <div>${input}</div>
               <div class="flex flex-row justify-end">
                   <span class="loading loading-dots loading-sm"></span>
               </div>
           </div>
       </div>
       `;
-    document.getElementById("sentence-input").before(newCard);
+    document.getElementById("code-input").before(newCard);
   
-    console.log("Running inference on sentence: " + sentence);
+    console.log("Running inference on input: " + input);
     runningInference = true;
-    fetch("/api/sentiment-analysis", {
+    fetch("/backend", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ sentence: sentence }),
+      body: JSON.stringify({ input: input }),
     })
-      .then((response) => response.json())
+      .then((response) => response)
       .then((data) => {
         console.log(data);
-        updateCard(cardIndex, sentence, data.sentiment);
+        code_result = data.text();
+        return code_result;
       })
+      .then((code_result)=>
+        updateCard(cardIndex, input, code_result)
+      )
       .catch((error) => {
         console.log(error);
       });
   }
   
-  function updateCard(cardIndex, sentence, sentiment) {
-    badge = "";
-    if (sentiment === "positive") {
-      badge = `<span class="badge badge-success">Positive</span>`;
-    } else if (sentiment === "negative") {
-      badge = `<span class="badge badge-error">Negative</span>`;
-    } else if (sentiment === "neutral") {
-      badge = `<span class="badge badge-ghost">Neutral</span>`;
-    } else {
-      badge = `<span class="badge badge-ghost">Unsure</span>`;
-    }
+  function updateCard(cardIndex, input, code_result) {
     var cardElement = document.getElementById("card-" + cardIndex);
+    // Updated innerHTML to include better handling for code overflow
     cardElement.innerHTML = `
       <div class="card bg-base-100 shadow-xl w-full">
-          <div class="m-4 flex flex-col gap-2">
-              <div>${sentence}</div>
-              <div class="flex flex-row justify-end">
-                  ${badge}
-              </div>
-          </div>
+        <div class="m-4 flex flex-col gap-2">
+          <div class="font-bold">Input:</div>
+          <div class="p-3 bg-gray-100 rounded overflow-hidden">${input}</div>
+          <div class="font-bold mt-4">Result:</div>
+          <pre class="p-3 bg-gray-100 text-green-600 rounded overflow-auto max-h-60 custom-code"><code>${code_result}</code></pre>
+        </div>
       </div>
-      `;
+    `;
     runningInference = false;
-  }
+}
+
   
   function setAlert(msg) {
     var alertElement = document.getElementById("alert");
